@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Your Attendance</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #444;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mark Your Attendance</h1>
+        <label for="role">Select Your Role</label>
+        <select id="role" onchange="toggleRoleFields()">
+            <option value="">-- Select Role --</option>
+            <option value="student">Student</option>
+            <option value="coordinator">Coordinator</option>
+        </select>
+
+        <div id="studentFields" class="hidden">
+            <label for="studentId">Student ID</label>
+            <input type="text" id="studentId" placeholder="Enter Student ID">
+        </div>
+
+        <div id="coordinatorFields" class="hidden">
+            <label for="coordinatorId">Coordinator ID</label>
+            <input type="text" id="coordinatorId" placeholder="Enter Coordinator ID">
+        </div>
+
+        <label for="name">Name</label>
+        <input type="text" id="name" placeholder="Enter Your Name">
+
+        <button onclick="markAttendance()">Mark Attendance</button>
+    </div>
+
+    <script>
+        function toggleRoleFields() {
+            const role = document.getElementById('role').value;
+            const studentFields = document.getElementById('studentFields');
+            const coordinatorFields = document.getElementById('coordinatorFields');
+
+            if (role === 'student') {
+                studentFields.classList.remove('hidden');
+                coordinatorFields.classList.add('hidden');
+            } else if (role === 'coordinator') {
+                studentFields.classList.add('hidden');
+                coordinatorFields.classList.remove('hidden');
+            } else {
+                studentFields.classList.add('hidden');
+                coordinatorFields.classList.add('hidden');
+            }
+        }
+
+        async function markAttendance() {
+            const role = document.getElementById('role').value;
+            const name = document.getElementById('name').value;
+            const studentId = document.getElementById('studentId').value;
+            const coordinatorId = document.getElementById('coordinatorId').value;
+
+            if (!role || !name || (role === 'student' && !studentId) || (role === 'coordinator' && !coordinatorId)) {
+                alert('Please fill in all required fields!');
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+                    // Get the current time
+                    const currentTime = new Date().toLocaleString();
+
+                    const content = `
+📍 **Attendance Marked**
+👤 **Name:** ${name}
+🎭 **Role:** ${role}
+🆔 **ID:** ${role === 'student' ? studentId : coordinatorId}
+🌍 **Location:** [View on Maps](${mapsLink})
+⏰ **Time:** ${currentTime}
+                    `.trim();
+
+                    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1330006259847659540/m_0kkzjbvLc5_JybRFEZ-w3LDu27-GqLGDdJMFcEotged3NN4dWnyAXDf5dxTfj3Q-01";
+
+                    try {
+                        const response = await fetch(DISCORD_WEBHOOK_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                content: content, // The message to send
+                                username: "Attendance Bot", // Bot's name in Discord
+                                avatar_url: "https://via.placeholder.com/150" // Optional: URL of a profile picture for the bot
+                            }),
+                        });
+
+                        if (response.ok) {
+                            alert('Attendance marked and location sent to Discord!');
+                        } else {
+                            const errorData = await response.json();
+                            console.error('Error response from Discord:', errorData);
+                            alert('Failed to send location to Discord.');
+                        }
+                    } catch (error) {
+                        console.error('Error sending location to Discord:', error);
+                        alert('An error occurred while sending location.');
+                    }
+                },
+                (error) => {
+                    console.error('Error fetching location:', error);
+                    alert('Unable to fetch location.');
+                }
+            );
+        }
+    </script>
+</body>
+</html>
